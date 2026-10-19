@@ -1,0 +1,25 @@
+{
+  "source": "GitHub Actions build artifact",
+  "repository": "lightpanda-io/browser",
+  "merge_commit": "f734e7f6aebc945fb8340284bfddd43244bf49ff",
+  "pr": "https://github.com/lightpanda-io/browser/pull/4023",
+  "workflow_url": "https://github.com/lightpanda-io/browser/actions/runs/39102731049",
+  "artifact_id": 12127034112,
+  "archive_name": "lightpanda-post-merge-f734e7f6.zip",
+  "archive_sha256": "567543f12ee1fbbe28b8ece33ace50a640954633675c9866cacba615dc573061",
+  "executable_name": "lightpanda-merge-f734e7f6",
+  "executable_sha256": "861906c6493cffb94a45667648ed5c3db091ae659adb4c0532e0dc9afd9607a5",
+  "executable_size_bytes": 207047376,
+  "version": "1.1.0-dev.10732+f734e7f6a",
+  "verified_checks": [
+    "lightpanda version",
+    "local fetch with JS DOM modification",
+    "TCP CDP /json/version",
+    "TCP CDP Browser.getVersion",
+    "Unix socket mode 0600",
+    "Unix socket /json/version",
+    "Unix WebSocket CDP Browser.getVersion",
+    "Unix socket removal on SIGTERM"
+  ],
+  "scope": "Executed in local isolated Linux x86_64 container, offline test website served over loopback"
+}

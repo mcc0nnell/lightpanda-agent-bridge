@@ -17,3 +17,8 @@ __pycache__/
 # Temporary run artifacts
 *.sock
 browser.log
+
+# Privacy-sensitive evidence receipts
+mcp-integration-result.json
+runs/
+evidence-runs/

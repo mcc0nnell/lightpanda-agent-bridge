@@ -1,0 +1,19 @@
+# Runtime browsers and downloads
+bin/
+*.zip
+*.tar.gz
+*.so
+*.a
+*.debug
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# Local credentials and overrides
+.env
+.env.*
+!.env.example
+# Temporary run artifacts
+*.sock
+browser.log

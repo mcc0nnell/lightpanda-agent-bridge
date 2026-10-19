@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "lightpanda-local": {
+      "command": "python3",
+      "args": [
+        "/ABSOLUTE/PATH/TO/lightpanda-agent-bridge/lightpanda_mcp.py"
+      ],
+      "env": {
+        "LIGHTPANDA_BINARY": "/ABSOLUTE/PATH/TO/lightpanda-agent-bridge/bin/lightpanda-merge-f734e7f6",
+        "LIGHTPANDA_SHA256": "861906c6493cffb94a45667648ed5c3db091ae659adb4c0532e0dc9afd9607a5"
+      }
+    }
+  }
+}

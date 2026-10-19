@@ -7,7 +7,9 @@ import os
 from pathlib import Path
 import select
 import subprocess
+import sys
 import threading
+import tempfile
 
 HERE = Path(__file__).resolve().parent.parent
 FIXTURE = (HERE / "sample.html").read_bytes()
@@ -33,9 +35,11 @@ def main():
     web = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=web.serve_forever, daemon=True).start()
     url = f"http://127.0.0.1:{web.server_address[1]}"
+    recording_dir = tempfile.TemporaryDirectory(prefix="lightpanda-mcp-test-")
+    env = {**os.environ, "LIGHTPANDA_RUN_DIR": recording_dir.name}
     server = subprocess.Popen(
-        ["python3", "-u", str(HERE / "lightpanda_mcp.py")],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0,
+        [sys.executable, "-u", str(HERE / "lightpanda_mcp.py")],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, env=env,
     )
     events = []
     seq = 0
@@ -64,7 +68,7 @@ def main():
         init = rpc("initialize", {"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"lightpanda-test","version":"1"}})
         assert init["serverInfo"]["name"] == "lightpanda-local"
         names = {item["name"] for item in rpc("tools/list")["tools"]}
-        assert names == {"lightpanda_open","lightpanda_actions","lightpanda_status","lightpanda_close","lightpanda_run"}
+        assert names == {"lightpanda_open","lightpanda_actions","lightpanda_status","lightpanda_close","lightpanda_run","lightpanda_record","lightpanda_replay"}
         opened = tool("lightpanda_open", {"url":url + "/"})
         assert opened["status"] == "RUNNING" and opened["socket_permissions"] == "0o600"
         assert opened["page"]["title"] == "Lightpanda On-Demand Demo"
@@ -93,6 +97,20 @@ def main():
         assert closed["status"] == "CLOSED" and closed["socket_removed"]
         once = tool("lightpanda_run", {"url":url + "/second","actions":[{"type":"evaluate","expression":"document.title"}]})
         assert once["status"] == "PASS" and once["actions"][0]["result"] == "Second page"
+        recorded = tool("lightpanda_record", {"url": url + "/", "actions": [
+            {"type":"fill","selector":"#q","value":"{{search}}"},
+            {"type":"click","selector":"#go"},
+            {"type":"extract","selector":"#items li"}
+        ], "inputs": {"search": "pipe"}})
+        assert recorded["outcome"] == "PASS" and recorded["required_replay_inputs"] == ["search"], recorded
+        recording = (Path(recording_dir.name) / (recorded["receipt_id"] + ".json")).read_text()
+        assert "SignPipe" not in recording and '"pipe"' not in recording, recording
+        replayed = tool("lightpanda_replay", {"receipt_id": recorded["receipt_id"], "inputs": {"search": "pipe"}})
+        assert replayed["outcome"] == "PASS", replayed
+        mismatch = tool("lightpanda_replay", {"receipt_id": recorded["receipt_id"], "inputs": {"search": "light"}})
+        assert mismatch["outcome"] == "FAIL", mismatch
+        blocked = tool("lightpanda_replay", {"receipt_id": recorded["receipt_id"]})
+        assert blocked["outcome"] == "BLOCKED", blocked
         invalid = rpc("tools/call", {"name":"lightpanda_open","arguments":{"url":"file:///etc/passwd"}})
         assert invalid.get("isError") and "Only absolute http" in invalid["content"][0]["text"]
         assert rpc("ping") == {}
@@ -106,6 +124,9 @@ def main():
             "one_shot":True,
             "unix_socket_cleanup":True,
             "invalid_url_rejected":True,
+            "evidence_recorded":True,
+            "replay_pass_fail_blocked":True,
+            "no_raw_page_content_in_receipt":True,
             "results":events,
         }
         (HERE / "mcp-integration-result.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -122,6 +143,7 @@ def main():
             print("MCP stderr:", stderr[-1200:])
         web.shutdown()
         web.server_close()
+        recording_dir.cleanup()
 
 if __name__ == "__main__":
     main()

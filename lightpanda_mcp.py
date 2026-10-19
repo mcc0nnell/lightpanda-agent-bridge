@@ -13,6 +13,7 @@ import sys
 from typing import Any
 
 from lightpanda_service import BrowserSession, MAX_ACTIONS
+from lightpanda_evidence import record, replay, summary
 
 NAME = "lightpanda-local"
 VERSION = "0.1.0"
@@ -41,6 +42,22 @@ TOOLS = [
         "name": "lightpanda_run",
         "description": "One-shot open, execute browser actions and close. Suitable for ad-hoc agent requests.",
         "inputSchema": {"type": "object", "properties": {"url": {"type": "string"}, "actions": {"type": "array", "items": {"type": "object"}, "maxItems": MAX_ACTIONS}}, "required": ["url"], "additionalProperties": False},
+    },
+
+    {
+        "name": "lightpanda_record",
+        "description": "Run a Lightpanda workflow and persist a sanitized, SHA-256 checked evidence receipt (no raw page contents or secrets). Use {{name}} placeholders for replayable input values.",
+        "inputSchema": {"type": "object", "properties": {
+            "url": {"type": "string"}, "actions": {"type": "array", "items": {"type": "object"}, "minItems": 1, "maxItems": MAX_ACTIONS},
+            "inputs": {"type": "object", "additionalProperties": {"type": "string"}}
+        }, "required": ["url", "actions"], "additionalProperties": False},
+    },
+    {
+        "name": "lightpanda_replay",
+        "description": "Replay an evidence receipt with optional supplied parameter values; compare observed result hashes against original and save a new PASS/FAIL/BLOCKED receipt.",
+        "inputSchema": {"type": "object", "properties": {
+            "receipt_id": {"type": "string"}, "inputs": {"type": "object", "additionalProperties": {"type": "string"}}
+        }, "required": ["receipt_id"], "additionalProperties": False},
     },
 ]
 
@@ -86,6 +103,10 @@ class MCPBridge:
             s.close()
             import os
             return {"session_name": name, "status": "CLOSED", "socket_removed": not sock or not os.path.exists(sock)}
+        if tool == "lightpanda_record":
+            return summary(record(args["url"], args["actions"], args.get("inputs")))
+        if tool == "lightpanda_replay":
+            return summary(replay(args["receipt_id"], args.get("inputs")))
         if tool == "lightpanda_run":
             s = BrowserSession(args["url"])
             try:
@@ -118,7 +139,7 @@ class MCPBridge:
                 # Use MCP tool isError to keep action errors as tool-level results.
                 try:
                     res = self.call_tool(tool, args)
-                    error = res.get("status") == "FAIL"
+                    error = res.get("status") == "FAIL" or res.get("outcome") in ("FAIL", "BLOCKED")
                 except Exception as exc:
                     error = True
                     res = {"status": "FAIL", "error": f"{type(exc).__name__}: {exc}"}

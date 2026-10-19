@@ -1,0 +1,4 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Lightpanda On-Demand Demo</title></head><body>
+<h1>Browser Lab</h1><input id="q"><button id="go">Search</button><ul id="items"></ul>
+<script>const names=['SignPipe','TalkPipe','Lightpanda','WindAnvil'];document.querySelector('#go').addEventListener('click',()=>{const q=document.querySelector('#q').value.toLowerCase();document.querySelector('#items').replaceChildren(...names.filter(x=>x.toLowerCase().includes(q)).map(x=>{let li=document.createElement('li');li.textContent=x;return li;}))});</script>
+</body></html>
